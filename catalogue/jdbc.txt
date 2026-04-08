@@ -1,0 +1,66 @@
+cat <<'EOF' | kubectl apply -f -
+apiVersion: v1
+kind: Secret
+metadata:
+  name: jdbc-postgres-secret
+  namespace: iceberg-jdbc
+type: Opaque
+stringData:
+  POSTGRES_DB: iceberg_catalog
+  POSTGRES_USER: iceberg_user
+  POSTGRES_PASSWORD: iceberg_pass
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: jdbc-postgres-pvc
+  namespace: iceberg-jdbc
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 20Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jdbc-postgres
+  namespace: iceberg-jdbc
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jdbc-postgres
+  template:
+    metadata:
+      labels:
+        app: jdbc-postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:15
+          ports:
+            - containerPort: 5432
+          envFrom:
+            - secretRef:
+                name: jdbc-postgres-secret
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: jdbc-postgres-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jdbc-postgres
+  namespace: iceberg-jdbc
+spec:
+  selector:
+    app: jdbc-postgres
+  ports:
+    - port: 5432
+      targetPort: 5432
+EOF

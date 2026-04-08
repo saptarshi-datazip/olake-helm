@@ -690,7 +690,7 @@ fusion:
         spark.dynamicAllocation.enabled: "true"
         spark.shuffle.service.enabled: "false"
         spark.dynamicAllocation.shuffleTracking.enabled: "true"
-        spark.driver.memory: "1g"
+        spark.driver.memory: "5g"
         spark.executor.memory: "4g"
         spark.executor.cores: "1"
         # pass creds into Spark driver/executor containers
