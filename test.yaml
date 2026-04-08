@@ -1,0 +1,187 @@
+useStandardResources: true
+
+# Global configuration for development environment
+global:
+  env:
+    CONTAINER_REGISTRY_BASE: ""
+    RUN_MODE: staging
+    TELEMETRY_DISABLED: true
+    AWS_EC2_METADATA_SERVICE_ENDPOINT: "http://172.31.32.10:61847/"
+    AWS_METADATA_SERVICE_TIMEOUT: "5"
+  # [TO BE DEPRECATED] Legacy job mapping - validates labels
+  jobMapping: {}
+    # 0:
+    #   agentpool: agentpool # Default: route to agentpool
+    # 1:
+    #   agentpool: generalpool # Job 1: legacy mapping (will be overridden by profile)
+    # 2:
+    #   "invaxlid key": "value" # Job 2: invalid label (will be rejected by validation)
+    # Job 3: no mapping (will get auto-affinity to avoid mapped nodes)
+
+  # Job Profiles - New system with full scheduling support
+  # jobProfiles:
+  #   1:
+  #     nodeSelector:
+  #       olake.io/workload-type: medium
+  #     tolerations:
+  #       - key: "kubernetes.azure.com/scalesetpriority"
+  #         operator: "Equal"
+  #         value: "spot"
+  #         effect: "NoSchedule"
+
+    # 3:
+    #   # Job 3: Only affinity (no nodeSelector, no tolerations)
+    #   # Tests: partial profile, required affinity to generalpool
+    #   affinity:
+    #     nodeAffinity:
+    #       requiredDuringSchedulingIgnoredDuringExecution:
+    #         nodeSelectorTerms:
+    #           - matchExpressions:
+    #               - key: agentpool
+    #                 operator: In
+    #                 values: ["generalpool"]
+
+    # 4:
+    #   # Job 4: Empty profile (all fields nil/empty)
+    #   # Tests: early return with empty profile
+    #   nodeSelector: {}
+    #   tolerations: []
+    #   affinity: null
+
+    # 5:
+    #   # Job 5: No validation on profiles - invalid labels accepted
+    #   # Tests: profiles don't validate (unlike jobMapping)
+    #   nodeSelector:
+    #     "this is invalid label key": "invalid-value"
+    #     "another bad key": "test"
+    #   tolerations: []
+
+olakeWorker:
+  image:
+    # repository: dzipstagingacr.azurecr.io/olake-k8s-worker
+    repository: olakego/ui-worker
+    tag: "latest"
+    pullPolicy: Always
+    # repository: worker-dev
+    # tag: dev1
+    # pullPolicy: Never
+
+    # repository: dzipstagingacr.azurecr.io/olake-k8s-worker
+    # tag: latest
+    # pullPolicy: Always
+
+  # Resource constraints for development
+  # resources: 
+    # requests:
+    #   memory: "1024Mi"
+    #   cpu: "0.1"
+    # limits:
+    #   memory: "4000Mi"
+  resources: {}
+
+  # securityContext:
+  #   runAsNonRoot: true
+  #   runAsUser: 1000
+  #   runAsGroup: 1000
+  #   fsGroup: 1000
+
+  config:
+    logging:
+      level: debug
+      format: console
+
+# OLake UI development configuration
+olakeUI:
+  image:
+    # repository: dzipstagingacr.azurecr.io/olake-ui
+    repository: olakego/ui
+    tag: "stag-v0.4.0-dev1"
+    pullPolicy: Always
+    # repository: ui-local
+    # tag: latest
+    # pullPolicy: Never
+
+    # repository: dzipstagingacr.azurecr.io/olake-ui
+    # tag: latest
+    # pullPolicy: Always
+  # service:
+    # -- Service type (ClusterIP for internal, NodePort/LoadBalancer for external access)
+    # type: NodePort
+    # nodePort: 30080
+  # Resource constraints for development
+  # resources:
+  #   requests:
+  #     memory: "101Mi"
+  #     cpu: "250m"
+  #   limits:
+  #     memory: "512Mi"
+  #     cpu: "1000m"
+  resources: {}
+
+  # securityContext:
+  #   runAsNonRoot: true
+  #   runAsUser: 1000
+  #   runAsGroup: 1000
+  #   fsGroup: 1000
+
+nfsServer:
+  enabled: true
+  external:
+    storageClass: "efs-csi"
+    size: "20Gi"
+  # securityContext:
+  #   runAsNonRoot: true
+  #   runAsUser: 1000
+  #   runAsGroup: 1000
+  #   fsGroup: 1000
+
+# PostgreSQL configuration - using external database
+postgresql:
+  enabled: true
+  external:
+    existingSecret: ""
+    properties:
+      host: "dz-stag-postgres-private.postgres.database.azure.com"
+      port: 5432
+      username: "postgres"
+      password: "eVqz5HAbiotM3LV"
+      olake_database: "olake_database"
+      temporal_database: "temporal_database"
+      fusion_database: "fusion_database"
+      ssl_mode: "require"
+    secretKeys:
+      host: "host"
+      port: "port"
+      username: "username"
+      password: "password"
+      olake_database: "olake_database"
+      temporal_database: "temporal_database"
+      fusion_database: "fusion_database"
+      ssl_mode: "ssl_mode"
+
+# All services enabled for full stack testing
+temporal:
+  enabled: true
+  ui:
+    enabled: false
+    service:
+      type: ClusterIP
+      annotations: {}
+
+  # securityContext:
+  #   runAsNonRoot: true
+  #   runAsUser: 1000
+  #   runAsGroup: 1000
+  #   fsGroup: 1000
+ 
+elasticsearch:
+  enabled: false
+
+fusion:
+  enabled: true
+  # securityContext:
+  #   runAsNonRoot: true
+  # s3:
+  #   endpoint: "http://172.31.32.13:9000"
+  # catalog:
+  #   jdbcUri: "jdbc:postgresql://172.31.32.13:5432/iceberg"

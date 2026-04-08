@@ -65,7 +65,7 @@ global:
   # -- Service account configuration for job pods created by olake-workers
   # Used for cloud provider IAM integration (AWS IRSA, GCP Workload Identity, Azure Workload Identity)
   jobServiceAccount:
-    create: false
+    create: true
     name: ""
 
     # Used for cloud provider IAM role association
@@ -74,7 +74,8 @@ global:
     #   GCP Workload Identity: iam.gke.io/gcp-service-account: "olake-job@project.iam.gserviceaccount.com"
     #   Azure Workload Identity: azure.workload.identity/client-id: "12345678-1234-1234-1234-123456789012"
     # Permissions for AWS Glue catalog: https://olake.io/docs/writers/iceberg/catalog/glue#required-iam-permissions
-    annotations: {}
+    annotations:
+      eks.amazonaws.com/role-arn: "arn:aws:iam::672919669757:role/dz-fusion-benchmark-role"
 
   # -- Global environment variables that apply to all OLake components
   # These variables are inherited by all services (olakeUI, olakeWorker)
@@ -596,7 +597,7 @@ fusion:
   image:
     repository: olakego/fusion
     # TODO: update image tag
-    tag: dev-v4
+    tag: dev-v5
     pullPolicy: IfNotPresent
 
   # --- Fusion pod resource requirements (optional overrides)
@@ -625,7 +626,10 @@ fusion:
   #   env:
   #     CUSTOM_VAR: "value"
   #     FEATURE_FLAG: "true"
-  env: {}
+  env: 
+    AWS_ACCESS_KEY_ID: "admin"
+    AWS_SECRET_ACCESS_KEY: "password"
+    AWS_REGION: "us-east-1"
 
   # --- Pod scheduling constraints for the Fusion pod
   nodeSelector: {}
@@ -675,7 +679,7 @@ fusion:
       image:
         repository: olakego/fusion-spark
         # TODO: update image tag
-        tag: dev-v4
+        tag: dev-v5
         pullPolicy: IfNotPresent
 
       # Extra Spark config entries (map of key->value).
@@ -689,6 +693,18 @@ fusion:
         spark.driver.memory: "1g"
         spark.executor.memory: "4g"
         spark.executor.cores: "1"
+        # pass creds into Spark driver/executor containers
+        spark.kubernetes.driverEnv.AWS_ACCESS_KEY_ID: "admin"
+        spark.kubernetes.driverEnv.AWS_SECRET_ACCESS_KEY: "password"
+        spark.kubernetes.driverEnv.AWS_REGION: "us-east-1"
+        spark.kubernetes.executorEnv.AWS_ACCESS_KEY_ID: "admin"
+        spark.kubernetes.executorEnv.AWS_SECRET_ACCESS_KEY: "password"
+        spark.kubernetes.executorEnv.AWS_REGION: "us-east-1"
+        # MinIO S3A settings (recommended so Spark/Hadoop can actually read/write)
+        spark.hadoop.fs.s3a.endpoint: "http://minio.storage.svc.cluster.local:9000"
+        spark.hadoop.fs.s3a.path.style.access: "true"
+        spark.hadoop.fs.s3a.connection.ssl.enabled: "false"
+        spark.hadoop.fs.s3a.aws.credentials.provider: "com.amazonaws.auth.EnvironmentVariableCredentialsProvider"
 
       # Additional container properties for the Spark optimizer container (map of key->value).
       # This can be used to set properties like:
