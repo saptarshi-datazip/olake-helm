@@ -120,3 +120,20 @@ Return the PostgreSQL secret name
 {{- printf "%s-external-postgresql" (include "olake.fullname" .) }}
 {{- end }}
 {{- end }}
+
+{{/*
+Optimizer config hash used for conditional reconciliation.
+*/}}
+{{- define "olake.optimizerConfigHash" -}}
+{{- $o := .Values.fusion.optimizer.spark -}}
+{{- $data := dict
+    "desiredParallelism" $o.desiredParallelism
+    "jobUri" $o.jobUri
+    "imageRepo" $o.image.repository
+    "imageTag" $o.image.tag
+    "imagePullPolicy" $o.image.pullPolicy
+    "extraConfig" $o.extraConfig
+    "properties" $o.properties
+-}}
+{{- $data | toJson | sha256sum | trunc 16 -}}
+{{- end -}}
